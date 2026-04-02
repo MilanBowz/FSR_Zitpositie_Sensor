@@ -37,15 +37,15 @@ Gewicht (g) met weegschaal | Vout(min) (V) | Vout(rms) (V) | R_FSR (Ω)| voorwer
 ### Sensor 1 (0-150kg)
 Rfsr (noload) > 2000 kE
 
-Gewicht (g) met weegschaal | Vout (V)  | R_FSR (Ω) | voorwerp
+Gewicht (kg) met weegschaal | Vout (V)  | R_FSR (Ω) | voorwerp
 ------------------------|-----------|-------------|----------|
 0                       | 0         | >2000k          | geen gewicht / kurk
-1255                    | 0.036m     |  >2000k           | gymgewicht 1.25kg
-2324                    | 0.036m     | >2000k           | gymgewicht 2.5kg
-3579                    | 0.050m | >2000kE           | gymgewicht 2.5kg + 1.25
-4655                    | 0.100m | >2000k           | 2 x gymgewicht 2.5kg
-5910                    | 0.130m | >2000k          | 2 x gymgewicht 2.5kg + 1.25
-26000                    | 0.02 | 1500-1700k          | koeler  26kg </br> aan de 2000 kE grens|
+1.255                    | 0.036m     |  >2000k           | gymgewicht 1.25kg
+2.324                    | 0.036m     | >2000k           | gymgewicht 2.5kg
+3.579                    | 0.050m | >2000kE           | gymgewicht 2.5kg + 1.25
+4.655                    | 0.100m | >2000k           | 2 x gymgewicht 2.5kg
+5.910                    | 0.130m | >2000k          | 2 x gymgewicht 2.5kg + 1.25
+26.000                    | 0.02 | 1500-1700k          | koeler  26kg </br> aan de 2000 kE grens|
 ... ||| metingen puur met multimeter
 
 ... ||| best > 30 kg om te meten
