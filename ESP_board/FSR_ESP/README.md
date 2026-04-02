@@ -40,16 +40,22 @@ Rfsr (noload) > 2000 kE
 Gewicht (g) met weegschaal | Vout (V)  | R_FSR (Ω) | voorwerp
 ------------------------|-----------|-------------|----------|
 0                       | 0         | >2000k          | geen gewicht / kurk
-1255                    | 0.036     |  >2000k           | gymgewicht 1.25kg
-2324                    | 0.036     | >2000k           | gymgewicht 2.5kg
-3579                    | 0.050 | >2000kE           | gymgewicht 2.5kg + 1.25
-4655                    | 0.100 | >2000k           | 2 x gymgewicht 2.5kg
-5910                    | 0.130 | >2000k          | 2 x gymgewicht 2.5kg + 1.25
-26000                    | x | 1500-1700k          | koeler  26kg </br> aan de 2000 kE grens|
+1255                    | 0.036m     |  >2000k           | gymgewicht 1.25kg
+2324                    | 0.036m     | >2000k           | gymgewicht 2.5kg
+3579                    | 0.050m | >2000kE           | gymgewicht 2.5kg + 1.25
+4655                    | 0.100m | >2000k           | 2 x gymgewicht 2.5kg
+5910                    | 0.130m | >2000k          | 2 x gymgewicht 2.5kg + 1.25
+26000                    | 0.02 | 1500-1700k          | koeler  26kg </br> aan de 2000 kE grens|
+... ||| metingen puur met multimeter
+
 ... ||| best > 30 kg om te meten
-65000 | x | 100k-120k | persoon x
+65000 | x | 10k-12k | persoon x
 ... | x |  | persoon z
-90000                    | x | 200-450          | persoon y => max. gewicht |
+90000                    | 3.15 | 200-450          | persoon y => max. gewicht |
 ...
 
-## Nadelen
+Vout ≈ 3,3 x (10/(10 + 1500)) ≈ 0.02 V </br>
+Vout ≈ 3,3 x (10/(10 + 10)) ≈ 1.5 V </br>
+Vout ≈ 3,3 x (10/(10+ 0,45)) ≈ 3,15 V
+
+
