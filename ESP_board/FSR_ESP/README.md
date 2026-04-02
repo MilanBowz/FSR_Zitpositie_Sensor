@@ -49,7 +49,7 @@ Gewicht (kg) met weegschaal | Vout (V)  | R_FSR (Ω) | voorwerp
 ... ||| metingen puur met multimeter
 
 ... ||| best > 30 kg om te meten
-65000 | x | 10k-12k | persoon x
+63.000 | x | 10k-12k | persoon x
 ... | x |  | persoon z
 90000                    | 3.15 | 200-450          | persoon y => max. gewicht |
 ...
