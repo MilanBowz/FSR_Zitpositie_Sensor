@@ -1,7 +1,6 @@
 # Resultaten FSR met simpele pull-down weerstand (10kE)
 
 F: R = U/I
-
 Rpulldown = 10kE | Rfsr (noload) > 2000 kE
 
 ## Als Rf/R2 niet ingedrukt
@@ -33,6 +32,7 @@ Gewicht (g) met weegschaal | Vout(min) (V) | Vout(rms) (V) | R_FSR (Ω)| voorwer
 ?                    | 3.04      | 3.12 | x           | glazen kurk + max pressure human
 ...
 
+Deze sensor werkt goed voor 20–500 g, maar verzadigt rond 3V (>500 g).
 
 ### Sensor 1 (0-150kg)
 Rfsr (noload) > 2000 kE
@@ -47,15 +47,40 @@ Gewicht (kg) met weegschaal | Vout (V)  | R_FSR (Ω) | voorwerp
 5.910                    | 0.130m | >2000k          | 2 x gymgewicht 2.5kg + 1.25
 26.000                    | 0.02 | 1500-1700k          | koeler  26kg </br> aan de 2000 kE grens|
 ... ||| metingen puur met multimeter
-
 ... ||| best > 30 kg om te meten
 63.000 | x | 10k-12k | persoon x
 ... | x |  | persoon z
-90000                    | 3.15 | 200-450          | persoon y => max. gewicht |
+90.000                    | 3.15 | 200-450          | persoon y => max. gewicht |
 ...
 
-Vout ≈ 3,3 x (10/(10 + 1500)) ≈ 0.02 V </br>
-Vout ≈ 3,3 x (10/(10 + 10)) ≈ 1.5 V </br>
-Vout ≈ 3,3 x (10/(10+ 0,45)) ≈ 3,15 V
+**Vout = Vcc x R / (R + Rfsr)** </br>
+2000kE : Vout ≈ 3,3/201 ≈ 0.016 V </br>
+1500kE : Vout ≈ 3,3 x (10/(10 + 1500)) ≈ 0.02 V </br>
+10kE : Vout ≈ 3,3 x (10/(10 + 10)) ≈ 1.5 V </br>
+450E: Vout ≈ 3,3 x (10/(10+ 0,45)) ≈ 3,15 V
+
+Deze sensor meet pas vanaf ~25 kg betrouwbaar, optimaal bereik voor 3.3V is 30–90 kg.
+
+![test](../../images/grafiek.png)
+
+## Conclusies
+
+FSR-sensoren zijn niet lineair: De weerstand daalt exponentieel met toenemende kracht, wat leidt tot een afnemende spanningsverandering bij hogere belastingen.
+
+Dode zone bij lichte belasting – Beide sensoren vertonen vrijwel geen Vout voor gewichten onder ~10 kg (Sensor 1) of onder ~20 g (Sensor 2). Pas boven drempelwaarde treedt meetbare verandering op.
+
+Grafiek toont typische FSR-kromme – Steile stijging in lage belasting, daarna afvlakking (verzadiging).
+
+![](../../images/FSR_Theorie.jpg)
+
+## Verdere stappen
+
+1. Data doorgeven aan PC
+    - Serieel (USB-UART) – Meest eenvoudig: stuur Vout-waarden als ASCII via Serial.print() naar PC.
+    - ADC uitlezen (ESP32) – analoge pin, sample rate ≥ 10 Hz. (done)
+
+2. Grafiek displayen (real-time of offline)
+
+3. Zithouding herkennen via grafiekanalyse
 
 
