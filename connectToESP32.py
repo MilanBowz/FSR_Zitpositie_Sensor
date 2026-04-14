@@ -3,38 +3,130 @@ import serial
 import serial.tools.list_ports
 import time
 import sys
+import matplotlib
+matplotlib.use('TkAgg')  # Set backend before importing pyplot
+import matplotlib.pyplot as plt
+import threading
+import queue
+import warnings
+import atexit
+import os
 
-# CONFIGURATION - CHANGE THIS TO YOUR COM PORT
-COM_PORT = "COM18"  # Replace with your COM port from Device Manager
-BAUD_RATE = 9600   # Must match Serial.begin(9600) in your ESP32 code
+warnings.filterwarnings("ignore")  # Suppress all warnings
+
+# Check if plotter exists
+try:
+    from plotter import SimplePlotter
+    TOON_GRAFIEK = True
+except ImportError:
+    print("Plotter not available, running in text-only mode")
+    TOON_GRAFIEK = False
+
+# CONFIGURATION
+COM_PORT = "COM18"
+BAUD_RATE = 9600
+
+class PlotterThread(threading.Thread):
+    """Separate thread for handling the plotter"""
+    def __init__(self, max_points=400, window_seconds=8):
+        super().__init__()
+        self.plotter = None
+        self.max_points = max_points
+        self.window_seconds = window_seconds
+        self.data_queue = queue.Queue(maxsize=1000)
+        self.running = True
+        self.daemon = True
+        self.is_alive_flag = True
+        
+    def run(self):
+        """Run the plotter in a separate thread"""
+        try:
+            # Suppress warnings in this thread
+            import warnings
+            warnings.filterwarnings("ignore")
+            
+            self.plotter = SimplePlotter(
+                max_points=self.max_points, 
+                window_seconds=self.window_seconds
+            )
+            
+            while self.running and self.plotter and not self.plotter.is_window_closed():
+                try:
+                    data = self.data_queue.get(timeout=0.05)
+                    if data is None:
+                        break
+                    
+                    avg, volt = data
+                    if self.plotter:
+                        self.plotter.voeg_toe(avg, volt)
+                        
+                except queue.Empty:
+                    if self.plotter:
+                        try:
+                            # Very short pause
+                            plt.pause(0.001)
+                        except:
+                            pass
+                    continue
+                    
+        except Exception:
+            pass  # Silently ignore thread errors
+        finally:
+            self.is_alive_flag = False
+            # Don't try to close plotter here - let main thread handle it
+    
+    def add_data(self, avg, volt):
+        """Add data to the queue"""
+        if self.running and self.plotter and not self.plotter.is_window_closed():
+            try:
+                self.data_queue.put_nowait((avg, volt))
+                return True
+            except:
+                pass
+        return False
+    
+    def is_window_closed(self):
+        """Check if window is closed"""
+        if self.plotter:
+            return self.plotter.is_window_closed()
+        return False
+    
+    def stop(self):
+        """Stop the plotter thread"""
+        self.running = False
+        # Don't close plotter here - let main thread handle it
 
 def find_esp32_com_port():
     """Automatically find ESP32 Bluetooth COM port"""
-    print("Searching for ESP32 Bluetooth COM port...")
     ports = serial.tools.list_ports.comports()
-    
     for port in ports:
-        # Look for Bluetooth SPP ports
         if "Bluetooth" in port.description or "Standard Serial" in port.description:
-            print(f"  Found potential port: {port.device} - {port.description}")
-            # You can try to connect to each one
             return port.device
-    
     return None
 
+def cleanup_plotter(plotter_thread):
+    """Clean up plotter safely"""
+    if plotter_thread:
+        try:
+            plotter_thread.running = False
+            if plotter_thread.plotter:
+                # Force close without waiting for thread
+                try:
+                    plt.close('all')
+                except:
+                    pass
+        except:
+            pass
+
 def connect_and_read():
-    """Connect to ESP32 via Bluetooth SPP and read data"""
+    """Connect to ESP32 and read data"""
     
-    # Try to auto-find COM port if not specified
     port_to_use = COM_PORT
-    if port_to_use == "COM3":  # Still default, try to auto-detect
+    if port_to_use == "COM3":
         auto_port = find_esp32_com_port()
         if auto_port:
             port_to_use = auto_port
             print(f"Auto-detected COM port: {port_to_use}")
-        else:
-            print("Could not auto-detect ESP32 COM port")
-            print(f"Using manual setting: {port_to_use}")
     
     print(f"\n{'='*50}")
     print(f"ESP32 Bluetooth SPP Client")
@@ -42,115 +134,135 @@ def connect_and_read():
     print(f"Baud Rate: {BAUD_RATE}")
     print(f"{'='*50}\n")
     
+    plotter_thread = None
+    if TOON_GRAFIEK:
+        try:
+            plotter_thread = PlotterThread(max_points=500, window_seconds=8)
+            plotter_thread.start()
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"⚠ Grafiek niet beschikbaar: {e}\n")
+            plotter_thread = None
+    
+    # Register cleanup
+    def cleanup():
+        cleanup_plotter(plotter_thread)
+    atexit.register(cleanup)
+    
+    ser = None
     try:
-        # Open serial connection
         print(f"Connecting to {port_to_use}...")
         ser = serial.Serial(
             port=port_to_use,
             baudrate=BAUD_RATE,
-            timeout=1,  # 1 second timeout
+            timeout=0.05,
             write_timeout=1
         )
         
         print(f"✓ Connected to ESP32!\n")
-        print("Waiting for data... (Press Ctrl+C to stop)\n")
+        print("Waiting for data... (Press Ctrl+C or close graph to stop)\n")
         print("-" * 50)
         
-        # Optional: Send a command to ESP32 (uncomment if needed)
-        # ser.write(b"STATUS\n")
-        
         packet_count = 0
-        last_print_time = time.time()
+        last_status_time = time.time()
+        
+        time.sleep(1)
+        ser.reset_input_buffer()
         
         while True:
-            # Read data from ESP32
+            if plotter_thread and plotter_thread.is_window_closed():
+                break
+            
             if ser.in_waiting > 0:
                 line = ser.readline().decode('utf-8', errors='ignore').strip()
                 
-                if line:
-                    packet_count += 1
-                    print(f"[{packet_count:4d}] {line}")
-                    
-                    # Parse the data (optional)
-                    if "AVG:" in line and "VOLT:" in line:
-                        # Extract values
-                        try:
-                            avg_part = line.split(',')[0].split(':')[1]
-                            volt_part = line.split(',')[1].split(':')[1]
-                            print(f"        → Average: {avg_part}, Voltage: {volt_part}V")
-                        except:
-                            pass
-                
-                # Print status every 5 seconds
-                current_time = time.time()
-                if current_time - last_print_time >= 5:
-                    print(f"\n[STATUS] Packets received: {packet_count}")
-                    print("-" * 50)
-                    last_print_time = current_time
+                if line and "AVG:" in line and "RAW:" in line:
+                    try:
+                        parts = line.split(',')
+                        avg = float(parts[0].split(':')[1].strip())
+                        raw = float(parts[1].split(':')[1].strip())
+                        packet_count += 1
+                        
+                        if packet_count % 100 == 0:
+                            print(f"[{packet_count:5d}] AVG: {avg:.1f}, RAW: {raw:.2f}")
+                        
+                        if plotter_thread:
+                            if not plotter_thread.add_data(avg, raw):
+                                if plotter_thread.is_window_closed():
+                                    break
+                                
+                    except:
+                        pass
             
-            # Small delay to prevent CPU hogging
-            time.sleep(0.01)
+            if time.time() - last_status_time >= 3 and packet_count > 0:
+                rate = packet_count / (time.time() - last_status_time + 0.01)
+                queue_size = plotter_thread.data_queue.qsize() if plotter_thread else 0
+                print(f"\n[STATUS] Packets: {packet_count} | Rate: {rate:.1f} Hz | Queue: {queue_size}")
+                print("-" * 50)
+                last_status_time = time.time()
+            
+            time.sleep(0.001)
             
     except serial.SerialException as e:
-        print(f"\n❌ ERROR: Could not open {port_to_use}")
-        print(f"   Details: {e}")
-        print("\nTroubleshooting:")
-        print("  1. Make sure ESP32 is paired with Windows")
-        print("  2. Check the COM port number in Device Manager")
-        print("  3. Close any other program using this COM port")
-        print("  4. Try unplugging/repairing the ESP32")
+        print(f"\n❌ ERROR: Could not open {port_to_use}: {e}")
         return False
-        
     except KeyboardInterrupt:
         print("\n\n✓ Stopped by user")
-        return True
-        
     finally:
-        if 'ser' in locals() and ser.is_open:
+        # Clean up in correct order
+        if plotter_thread:
+            print("\nClosing graph...")
+            plotter_thread.running = False
+            time.sleep(0.1)
+            
+            # Close all plots safely
+            try:
+                plt.close('all')
+            except:
+                pass
+            
+            # Clear any remaining matplotlib figures
+            try:
+                import matplotlib._pylab_helpers
+                for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+                    try:
+                        plt.close(manager.num)
+                    except:
+                        pass
+            except:
+                pass
+        
+        if ser and ser.is_open:
             ser.close()
             print("Serial connection closed")
     
     return True
 
-def test_connection():
-    """Quick test to verify COM port works"""
-    import serial
-    
-    try:
-        ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=2)
-        print(f"✓ Successfully opened {COM_PORT}")
-        ser.close()
-        return True
-    except Exception as e:
-        print(f"❌ Cannot open {COM_PORT}: {e}")
-        return False
-
-if __name__ == "__main__":
-    # First, test if we can open the COM port
+def main():
+    """Main function"""
     print("ESP32 Bluetooth SPP Client for Windows 11")
     print("=" * 50)
     
-    # Optional: List all COM ports
     print("\nAvailable COM ports:")
-    ports = serial.tools.list_ports.comports()
-    for port in ports:
+    for port in serial.tools.list_ports.comports():
         print(f"  {port.device}: {port.description}")
     
     print("\n" + "=" * 50)
     
-    # Run the main connection
     success = connect_and_read()
     
     if not success:
         print("\nTroubleshooting Guide:")
         print("=====================")
-        print("1. Open 'Bluetooth & devices' in Windows Settings")
-        print("2. Click 'More devices and printer settings' (scroll down)")
-        print("3. Click 'Add a device' and pair with 'ESP32_FSR_Sensor'")
-        print("4. Open Device Manager → Ports (COM & LPT)")
-        print("5. Note the COM port number for 'Standard Serial over Bluetooth link'")
-        print("6. Update COM_PORT in this script")
-        print("\nAfter pairing, restart this script")
-        
+        print("1. Pair ESP32 with Windows in Bluetooth settings")
+        print("2. Check COM port in Device Manager")
+        print("3. Update COM_PORT in script if needed")
         input("\nPress Enter to exit...")
         sys.exit(1)
+    
+    print("\n App closed successfully")
+    # Force exit without waiting for thread cleanup
+    os._exit(0)
+
+if __name__ == "__main__":
+    main()

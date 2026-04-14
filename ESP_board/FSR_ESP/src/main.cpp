@@ -22,7 +22,7 @@ const int sensorReadInterval = 50; // 50ms = 20Hz
 
 void setup() {
   bluetooth.begin();
-  bluetooth.setSendInterval(50);
+  
 
   // Configureer ADC voor ESP32 voor optimaal bereik (0 - 3.3V)
   analogReadResolution(12);  // 12-bit resolutie (0-4095)
@@ -55,10 +55,10 @@ void loop() {
         average = total / numReadings;
         
         // Converteer naar spanning
-        float voltage = (average / 4095.0) * 3.3;
+        // float voltage = (average / 4095.0) * 3.3;
         
         // Verstuur via Bluetooth als verbonden
-        bluetooth.sendSensorData(average, voltage);
+        bluetooth.sendSensorData((float)rawValue, average);
     }
     // delay(1);
 }

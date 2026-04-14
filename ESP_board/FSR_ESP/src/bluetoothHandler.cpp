@@ -20,8 +20,8 @@ void BluetoothHandler::log(const String& message) {
 
 bool BluetoothHandler::begin() {
     // Initialize Serial for debugging
-    Serial.begin(9600);
-    bool success = SerialBT.begin("ESP32_FSR_Sensor");
+    // Serial.begin(9600);
+    bool success = SerialBT.begin(deviceName);
     
     // Initialize Bluetooth
     log("Initializing Bluetooth...");
@@ -70,9 +70,9 @@ bool BluetoothHandler::sendData(const String& data) {
     }
 }
 
-bool BluetoothHandler::sendSensorData(int averageValue, float voltage) {
-    // Format: "AVG:value,VOLT:voltage"
-    String data = "AVG:" + String(averageValue) + ",VOLT:" + String(voltage);
+bool BluetoothHandler::sendSensorData(int rawValue, float averageValue) {
+    // Format: "AVG:value avg of 10,RAW:value"
+    String data = "AVG:" + String(averageValue) + ",RAW:" + String(rawValue);
     if(isConnected()){
         log("CONNECTED: " + data);
         return sendData(data);
