@@ -23,7 +23,7 @@ except ImportError:
     TOON_GRAFIEK = False
 
 # CONFIGURATION
-COM_PORT = "COM18"
+COM_PORT = "COM22"
 BAUD_RATE = 9600
 
 class PlotterThread(threading.Thread):
